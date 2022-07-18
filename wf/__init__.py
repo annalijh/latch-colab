@@ -1,72 +1,76 @@
 """
-Find Motifs ...
+Find Motifs using Meme Suite
 """
 
 import subprocess
 from pathlib import Path
 
-from latch import small_task, workflow
+from latch import medium_task, workflow
 from latch.types import LatchFile, LatchDir
 
 
-#make the fasta file
-@small_task
-def fasta_convert_task(bed: LatchFile, genome: LatchFile) -> LatchFile:
-    #reference to the output
-    fasta_file = Path("output_fasta.fa").resolve()
-    
-    _bedtools_makefasta_cmd = [
-    "bedtools",
-    "getfasta",
-    "-fi",
-    genome.local_path,
-    "-bed",
-    bed.local_path,
-    "-fo",
-    str(fasta_file)
+# MEME find motifs
+@medium_task
+def run_motif_task(bed_file: LatchFile, genome_fasta: LatchFile, motif_lib: LatchFile) -> LatchDir:
+
+    """
+    Step 1: Extract DNA sequences from a fasta file based on feature coordinates.
+    """
+    output_fasta = Path("output_fasta.fa").resolve()
+
+    _bedtools_make_fasta_cmd = [
+        "bedtools",
+        "getfasta",
+        "-fi",
+        genome_fasta.local_path,
+        "-bed",
+        bed_file.local_path,
+        "-fo",
+        str(output_fasta)
     ]
 
-    subprocess.run(_bedtools_makefasta_cmd)
+    subprocess.run(_bedtools_make_fasta_cmd)
 
-    return LatchFile(str(fasta_file), "latch:///output_fasta.fa")
+    """
+    Step 2: RUN meme-suite AME
+        AME identifies known or user-provided motifs that are either relatively enriched in your sequences 
+        compared with control sequences, that are enriched in the first sequences in your input file, 
+        or that are enriched in sequences with small values of scores that you can specify with your input sequences
+    """
 
-#MEME find motifs
-@small_task
-def MEME_motif_task(fasta: LatchFile,motif_lib: LatchFile) -> LatchDir:
-    #output
-    motif_directory = Path("MEME_motif_output").resolve()
+    output_directory = Path("meme_analysis_output").resolve()
 
     _MEME_motif_cmd = [
-    "ame",
-    "--o",
-    str(motif_directory),
-    fasta.local_path,
-    motif_lib.local_path,
+        "ame",
+        "--o",
+        str(output_directory),
+        genome_fasta.local_path,
+        motif_lib.local_path,
     ]
 
     subprocess.run(_MEME_motif_cmd)
 
-    return LatchDir(str(motif_directory), "latch:///MEME_motif_output")
+    return LatchDir(str(output_directory), "latch:///meme_analysis_output")
 
 
 @workflow
-def call_motifs(bed: LatchFile,genome: Latchfile, motif_lib: Latchfile) -> LatchDir:
+def call_motifs(bed: LatchFile, genome: LatchFile, motif_lib: LatchFile) -> LatchDir:
     """MEME-Motif analyzes genomic positions for enriched motifs. 
 
     MEME-Motif
     ----
 
-    identifies known or user-provided motifs that are either relatively enriched in your sequences compared with control sequences, that are enriched in the first sequences in your input file, or that are enriched in sequences with small values of scores that you can specify with your input sequences
+    Identifies known or user-provided motifs that are either relatively enriched in your sequences compared with control sequences, that are enriched in the first sequences in your input file, or that are enriched in sequences with small values of scores that you can specify with your input sequences
 
     __metadata__:
         display_name: MEME Suite: AME motif caller
-        author: annalijh
-            name:
-            email:
-            github:
-        repository:
+        author:
+            name: Stephen Lu
+            email: stephen.lu@mail.mcgill.ca
+            github: https://github.com/TheMatrixMaster
+        repository: https://github.com/annalijh/latch-colab
         license:
-            id: 
+            id: MIT
 
     Args:
 
@@ -75,23 +79,33 @@ def call_motifs(bed: LatchFile,genome: Latchfile, motif_lib: Latchfile) -> Latch
 
           __metadata__:
             display_name: bed
-	
-	genome:
-	  input genome file
+
+        genome:
+          input genome file
+
           __metadata__:
             display_name: genome
 
-        motif library:
-          input motif library reference file:
+        motif_lib:
+          input motif library reference file
 
           __metadata__:
             display_name: library
 
         
     """
-    
-    fasta = fasta_convert_task(bed=bed,genome=genome)
-    return MEME_motif_task(fasta = fasta,motif_lib=motif_lib)
+
+    return run_motif_task(
+        bed=bed,
+        genome_fasta=genome,
+        motif_lib=motif_lib
+    )
 
 
+# Local Debugging
+if __name__ == "__main__":
+    bedFile = LatchFile("../data/")
+    genomeFastaFile = LatchFile("../data/")
+    motifLibFile = LatchFile("../data/")
 
+    call_motifs(bed=bedFile, genome=genomeFastaFile, motif_lib=motifLibFile)

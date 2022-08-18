@@ -29,14 +29,14 @@ RUN conda install -c bioconda meme
 RUN conda install -c bioconda bedtools
 
 # handle local files
-COPY data/hg38.fa /root/reference/hg38.fa
-COPY data/motif.meme /root/reference/motif.meme
+COPY data/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme /root/reference/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme
+COPY data/JASPAR_CORE_REDUNDANT_2016_vertebrates.meme /root/reference/JASPAR_CORE_REDUNDANT_2016_vertebrates.meme
 
 COPY wf /root/wf
 
 # Download hg38.fa file from source
-# RUN wget -P /root/reference http://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz
-# RUN gzip -d /root/reference/hg38.fa.gz
+RUN wget -P /root/reference http://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz
+RUN gzip -d /root/reference/hg38.fa.gz
 
 # STOP HERE:
 # The following lines are needed to ensure your build environement works
